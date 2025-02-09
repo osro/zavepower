@@ -1,89 +1,103 @@
-"""Adds config flow for Blueprint."""
+"""Config flow for the Zavepower integration."""
 
-from __future__ import annotations
+import logging
 
+import httpx
 import voluptuous as vol
+
 from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers import selector
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from slugify import slugify
+from homeassistant.core import callback
 
-from .api import (
-    IntegrationBlueprintApiClient,
-    IntegrationBlueprintApiClientAuthenticationError,
-    IntegrationBlueprintApiClientCommunicationError,
-    IntegrationBlueprintApiClientError,
+from .const import DOMAIN, LOGIN_ENDPOINT
+
+_LOGGER = logging.getLogger(__name__)
+
+STEP_USER_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required("username"): str,
+        vol.Required("password"): str,
+    }
 )
-from .const import DOMAIN, LOGGER
 
 
-class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """Config flow for Blueprint."""
+class ZavepowerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Zavepower."""
 
     VERSION = 1
 
-    async def async_step_user(
-        self,
-        user_input: dict | None = None,
-    ) -> config_entries.ConfigFlowResult:
-        """Handle a flow initialized by the user."""
-        _errors = {}
+    async def async_step_user(self, user_input=None):
+        """Handle the initial step."""
+        errors = {}
         if user_input is not None:
+            username = user_input["username"]
+            password = user_input["password"]
+
             try:
-                await self._test_credentials(
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
-                )
-            except IntegrationBlueprintApiClientAuthenticationError as exception:
-                LOGGER.warning(exception)
-                _errors["base"] = "auth"
-            except IntegrationBlueprintApiClientCommunicationError as exception:
-                LOGGER.error(exception)
-                _errors["base"] = "connection"
-            except IntegrationBlueprintApiClientError as exception:
-                LOGGER.exception(exception)
-                _errors["base"] = "unknown"
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        LOGIN_ENDPOINT,
+                        json={
+                            "method": "POST",
+                            "credentials": "include",
+                            "headers": {
+                                "Content-Type": "application/json;charset=utf-8"
+                            },
+                            "username": username,
+                            "password": password,
+                        },
+                        timeout=15,
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+            except httpx.RequestError as err:
+                _LOGGER.error("Request error: %s", err)
+                errors["base"] = "cannot_connect"
+            except httpx.HTTPStatusError as err:
+                _LOGGER.error("HTTP status error: %s", err)
+                errors["base"] = "invalid_auth"
             else:
-                await self.async_set_unique_id(
-                    ## Do NOT use this in production code
-                    ## The unique_id should never be something that can change
-                    ## https://developers.home-assistant.io/docs/config_entries_config_flow_handler#unique-ids
-                    unique_id=slugify(user_input[CONF_USERNAME])
-                )
-                self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title=user_input[CONF_USERNAME],
-                    data=user_input,
-                )
+                if "jwtToken" not in data or "refreshToken" not in data:
+                    # We didn't get back what we expected.
+                    errors["base"] = "invalid_auth"
+                else:
+                    # We have a valid token
+                    await self.async_set_unique_id(data["id"])
+                    self._abort_if_unique_id_configured()
+
+                    return self.async_create_entry(
+                        title=f"Zavepower ({data['firstName']} {data['lastName']})",
+                        data={
+                            "user_id": data["id"],
+                            "username": data["username"],
+                            "jwt_token": data["jwtToken"],
+                            "refresh_token": data["refreshToken"],
+                            "expiration": data["expiration"],
+                        },
+                    )
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_USERNAME,
-                        default=(user_input or {}).get(CONF_USERNAME, vol.UNDEFINED),
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.TEXT,
-                        ),
-                    ),
-                    vol.Required(CONF_PASSWORD): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.PASSWORD,
-                        ),
-                    ),
-                },
-            ),
-            errors=_errors,
+            data_schema=STEP_USER_DATA_SCHEMA,
+            errors=errors,
         )
 
-    async def _test_credentials(self, username: str, password: str) -> None:
-        """Validate credentials."""
-        client = IntegrationBlueprintApiClient(
-            username=username,
-            password=password,
-            session=async_create_clientsession(self.hass),
-        )
-        await client.async_get_data()
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        return ZavepowerOptionsFlowHandler(config_entry)
+
+
+class ZavepowerOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle Zavepower options."""
+
+    def __init__(self, config_entry):
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        # Example: no custom options yet, just an example text to show
+        return self.async_show_form(step_id="init", data_schema=vol.Schema({}))

@@ -1,57 +1,79 @@
-"""Sensor platform for integration_blueprint."""
+"""Zavepower sensor integration for Home Assistant."""
 
-from __future__ import annotations
+import logging
 
-from typing import TYPE_CHECKING
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from .const import DOMAIN
+from .coordinator import ZavepowerCoordinator
+from .entity import ZavepowerBaseEntity
 
-from .entity import IntegrationBlueprintEntity
-
-if TYPE_CHECKING:
-    from homeassistant.core import HomeAssistant
-    from homeassistant.helpers.entity_platform import AddEntitiesCallback
-
-    from .coordinator import BlueprintDataUpdateCoordinator
-    from .data import IntegrationBlueprintConfigEntry
-
-ENTITY_DESCRIPTIONS = (
-    SensorEntityDescription(
-        key="integration_blueprint",
-        name="Integration Sensor",
-        icon="mdi:format-quote-close",
-    ),
-)
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
-    entry: IntegrationBlueprintConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the sensor platform."""
-    async_add_entities(
-        IntegrationBlueprintSensor(
-            coordinator=entry.runtime_data.coordinator,
-            entity_description=entity_description,
-        )
-        for entity_description in ENTITY_DESCRIPTIONS
-    )
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+):
+    """Set up Zavepower sensors from a config entry."""
+    coordinator: ZavepowerCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    if coordinator.data is None:
+        await coordinator.async_request_refresh()
+
+    entities = []
+    # coordinator.data is a list of dicts: [{ "system": {...}, "state": {...} }, ...]
+    for system_data in coordinator.data:
+        system_id = system_data["system"]["id"]
+        system_name = system_data["system"]["name"]
+
+        entities.append(ZavepowerCurrentTempSensor(coordinator, system_id, system_name))
+        entities.append(ZavepowerSetTempSensor(coordinator, system_id, system_name))
+
+    async_add_entities(entities)
 
 
-class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
-    """Zavepower Sensor class."""
+class ZavepowerCurrentTempSensor(ZavepowerBaseEntity, SensorEntity):
+    """Sensor for current temperature."""
 
-    def __init__(
-        self,
-        coordinator: BlueprintDataUpdateCoordinator,
-        entity_description: SensorEntityDescription,
-    ) -> None:
-        """Initialize the sensor class."""
-        super().__init__(coordinator)
-        self.entity_description = entity_description
+    _attr_icon = "mdi:pool-thermometer"
 
     @property
-    def native_value(self) -> str | None:
-        """Return the native value of the sensor."""
-        return self.coordinator.data.get("body")
+    def name(self):
+        return "Current Temperature"
+
+    @property
+    def native_value(self):
+        """Return the current water temperature from the system state."""
+        item = self._get_state_data()
+        if item and item["state"]:
+            return item["state"].get("currentTemperature")
+        return None
+
+    @property
+    def native_unit_of_measurement(self):
+        return "°C"
+
+
+class ZavepowerSetTempSensor(ZavepowerBaseEntity, SensorEntity):
+    """Sensor for set temperature."""
+
+    _attr_icon = "mdi:target"
+
+    @property
+    def name(self):
+        return "Set Temperature"
+
+    @property
+    def native_value(self):
+        """Return the set (target) water temperature from the system state."""
+        item = self._get_state_data()
+        if item and item["state"]:
+            return item["state"].get("setTemperature")
+        return None
+
+    @property
+    def native_unit_of_measurement(self):
+        return "°C"
