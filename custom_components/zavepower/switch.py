@@ -40,7 +40,7 @@ async def async_setup_entry(
 
 
 class IntegrationBlueprintSwitch(IntegrationBlueprintEntity, SwitchEntity):
-    """integration_blueprint switch class."""
+    """Zavepower switch class."""
 
     def __init__(
         self,

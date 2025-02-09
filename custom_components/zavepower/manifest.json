@@ -1,0 +1,12 @@
+{
+  "domain": "zavepower",
+  "name": "Zavepower",
+  "codeowners": [
+    "@osro"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/osro/zavepower",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/osro/zavepower/issues",
+  "version": "0.1.0"
+}
