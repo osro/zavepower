@@ -7,7 +7,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import ZavepowerCoordinator
-from .entity import ZavepowerBaseEntity  # Example: a shared base entity
+from .entity import ZavepowerBaseEntity
 
 
 async def async_setup_entry(
@@ -40,7 +40,8 @@ class ZavepowerRestModeBinarySensor(ZavepowerBaseEntity, BinarySensorEntity):
     _attr_icon = "mdi:sleep"
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """Return the display name of the binary sensor."""
         return "Rest Mode"
 
     @property
@@ -54,7 +55,6 @@ class ZavepowerRestModeBinarySensor(ZavepowerBaseEntity, BinarySensorEntity):
     @property
     def icon(self) -> str:
         """Return device icon."""
-
         if self.is_on is True:
             return "mdi:sleep"
         return "mdi:sleep-off"
@@ -66,7 +66,8 @@ class ZavepowerHighRangeBinarySensor(ZavepowerBaseEntity, BinarySensorEntity):
     _attr_icon = "mdi:fire"
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """Return the display name of the binary sensor."""
         return "High Range"
 
     @property
@@ -80,7 +81,6 @@ class ZavepowerHighRangeBinarySensor(ZavepowerBaseEntity, BinarySensorEntity):
     @property
     def icon(self) -> str:
         """Return device icon."""
-
         if self.is_on is True:
             return "mdi:fire"
         return "mdi:fire-off"

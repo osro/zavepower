@@ -1,15 +1,15 @@
 import logging
+from datetime import datetime, timedelta, timezone
+
 import httpx
-import asyncio
-from datetime import timedelta, datetime, timezone
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     DOMAIN,
-    USER_SYSTEMS_ENDPOINT,
     LATEST_STATE_ENDPOINT,
     REFRESH_TOKEN_ENDPOINT,
+    USER_SYSTEMS_ENDPOINT,
 )
 
 _LOGGER = logging.getLogger(__name__)

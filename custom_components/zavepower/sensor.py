@@ -1,6 +1,7 @@
 """Zavepower sensor integration for Home Assistant."""
 
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -8,8 +9,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .coordinator import ZavepowerCoordinator
 from .entity import ZavepowerBaseEntity
+
+if TYPE_CHECKING:
+    from .coordinator import ZavepowerCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,7 +44,8 @@ class ZavepowerCurrentTempSensor(ZavepowerBaseEntity, SensorEntity):
     _attr_icon = "mdi:pool-thermometer"
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """Return the display name of the sensor."""
         return "Current Temperature"
 
     @property
@@ -53,7 +57,8 @@ class ZavepowerCurrentTempSensor(ZavepowerBaseEntity, SensorEntity):
         return None
 
     @property
-    def native_unit_of_measurement(self):
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit of measurement."""
         return "°C"
 
 
@@ -63,7 +68,8 @@ class ZavepowerSetTempSensor(ZavepowerBaseEntity, SensorEntity):
     _attr_icon = "mdi:target"
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """Return the display name of the sensor."""
         return "Set Temperature"
 
     @property
@@ -75,5 +81,6 @@ class ZavepowerSetTempSensor(ZavepowerBaseEntity, SensorEntity):
         return None
 
     @property
-    def native_unit_of_measurement(self):
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit of measurement."""
         return "°C"
