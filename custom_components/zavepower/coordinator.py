@@ -1,7 +1,7 @@
 """Cooxrdinator for fetching data from the Zavepower API."""
 
 import logging
-from datetime import datetime, timedelta, timezone, UTC
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from homeassistant.config_entries import ConfigEntry
@@ -44,7 +44,7 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
             update_interval=UPDATE_INTERVAL,
         )
 
-    async def _async_update_data(self):
+    async def _async_update_data(self) -> list:
         """Fetch data from Zavepower."""
         # 1. Check if token is expired or about to expire -> Refresh if needed
         await self._ensure_valid_token()
@@ -138,7 +138,7 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
             _LOGGER.exception("Invalid response from refresh token endpoint")
         return False
 
-    async def _fetch_systems(self):
+    async def _fetch_systems(self) -> list:
         """Get all systems for the user."""
         try:
             async with httpx.AsyncClient() as client:
@@ -151,24 +151,24 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 response.raise_for_status()
                 # This endpoint can return a single system or a list of systems
                 data = response.json()
-                # The example response is an object, but you mention "There can be multiple systems"
+                # The example response is an object, but you mention
+                # "There can be multiple systems"
                 # So let's standardize it to a list
                 if isinstance(data, dict):
                     return [data]
-                elif isinstance(data, list):
+                if isinstance(data, list):
                     return data
-                else:
-                    return []
-        except httpx.RequestError:
+                return []
+        except httpx.RequestError as err:
             _LOGGER.exception("Fetch systems request error")
             msg = "Cannot fetch systems."
-            raise UpdateFailed(msg)
-        except httpx.HTTPStatusError:
+            raise UpdateFailed(msg) from err
+        except httpx.HTTPStatusError as err:
             _LOGGER.exception("Fetch systems HTTP status error")
             msg = "Cannot fetch systems."
-            raise UpdateFailed(msg)
+            raise UpdateFailed(msg) from err
 
-    async def _fetch_latest_state(self, system_id):
+    async def _fetch_latest_state(self, system_id: str) -> dict | None:
         """Get the latest system state for a given system."""
         try:
             async with httpx.AsyncClient() as client:
