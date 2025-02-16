@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 import httpx
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -24,7 +25,7 @@ TOKEN_EXPIRATION_THRESHOLD_IN_SECONDS = 43200  # 12 hours
 class ZavepowerCoordinator(DataUpdateCoordinator):
     """Coordinator to fetch data from Zavepower once every 10 minutes."""
 
-    def __init__(self, hass: HomeAssistant, entry) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize."""
         self.hass = hass
         self.entry = entry

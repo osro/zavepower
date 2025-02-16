@@ -4,7 +4,12 @@ import logging
 
 import httpx
 import voluptuous as vol
-from homeassistant import config_entries
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.core import callback
 
 from .const import DOMAIN, LOGIN_ENDPOINT
@@ -19,12 +24,12 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class ZavepowerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ZavepowerConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Zavepower."""
 
     VERSION = 1
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input=None) -> ConfigFlowResult:
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
@@ -86,14 +91,14 @@ class ZavepowerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return ZavepowerOptionsFlowHandler(config_entry)
 
 
-class ZavepowerOptionsFlowHandler(config_entries.OptionsFlow):
+class ZavepowerOptionsFlowHandler(OptionsFlow):
     """Handle Zavepower options."""
 
-    def __init__(self, config_entry) -> None:
+    def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(self, user_input=None) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
