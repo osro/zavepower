@@ -1,3 +1,5 @@
+"""Cooxrdinator for fetching data from the Zavepower API."""
+
 import logging
 from datetime import datetime, timedelta, timezone
 

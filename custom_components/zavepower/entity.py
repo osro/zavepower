@@ -1,6 +1,7 @@
 """Entity base class for Zavepower integration."""
 
 import logging
+from typing import Any, cast
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -11,6 +12,8 @@ _LOGGER = logging.getLogger(__name__)
 
 class ZavepowerBaseEntity(CoordinatorEntity):
     """Common base entity for Zavepower entities, backed by a DataUpdateCoordinator."""
+
+    data: list[dict[str, Any]] | None = None
 
     _attr_has_entity_name = True
 
@@ -31,12 +34,13 @@ class ZavepowerBaseEntity(CoordinatorEntity):
             "manufacturer": "Zavepower",
         }
 
-    def _get_state_data(self):
+    def _get_state_data(self) -> dict[str, Any] | None:
         """Return the data block for this entity's system from the coordinator."""
         if not self.coordinator.data:
             return None
         # coordinator.data is a list of dicts: [{ "system": {...}, "state": {...} }, ...]
         for entry in self.coordinator.data:
+            entry = cast(dict[str, Any], entry)
             if entry["system"]["id"] == self._system_id:
                 return entry
         return None
