@@ -2,14 +2,14 @@
   "domain": "zavepower",
   "name": "Zavepower",
   "version": "0.1.0",
-  "config_flow": true,
-  "documentation": "https://github.com/osro/zavepower",
-  "issue_tracker": "https://github.com/osro/zavepower/issues",
-  "iot_class": "cloud_polling",
-  "requirements": [
-    "httpx>=0.24.0"
-  ],
   "codeowners": [
     "@osro"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/osro/zavepower",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/osro/zavepower/issues",
+  "requirements": [
+    "httpx>=0.24.0"
   ]
 }
