@@ -73,7 +73,7 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
 
         if expire_dt is None:
             _LOGGER.debug("Expire datetime is None, refreshing token")
-        elif (expire_dt - now_utc).total_seconds() < 60:
+        elif (expire_dt - now_utc).total_seconds() < 43200:  # 12 hours = 43200 seconds
             _LOGGER.debug(
                 f"Token expires in {(expire_dt - now_utc).total_seconds()} seconds, refreshing"
             )
@@ -82,8 +82,8 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 f"Token is still valid for {(expire_dt - now_utc).total_seconds()} seconds"
             )
 
-        # If we are within ~1 minute of expiration, let's refresh
-        if expire_dt is None or (expire_dt - now_utc).total_seconds() < 60:
+        # If we are within 12 hours of expiration, let's refresh
+        if expire_dt is None or (expire_dt - now_utc).total_seconds() < 43200:
             _LOGGER.debug("Refreshing Zavepower token")
             refreshed = await self._refresh_token_api()
             if refreshed:
