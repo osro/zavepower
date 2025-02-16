@@ -18,6 +18,8 @@ _LOGGER = logging.getLogger(__name__)
 
 UPDATE_INTERVAL = timedelta(minutes=10)
 
+TOKEN_EXPIRATION_THRESHOLD_IN_SECONDS = 43200  # 12 hours
+
 
 class ZavepowerCoordinator(DataUpdateCoordinator):
     """Coordinator to fetch data from Zavepower once every 10 minutes."""
@@ -75,17 +77,25 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
 
         if expire_dt is None:
             _LOGGER.debug("Expire datetime is None, refreshing token")
-        elif (expire_dt - now_utc).total_seconds() < 43200:  # 12 hours = 43200 seconds
+        elif (
+            expire_dt - now_utc
+        ).total_seconds() < TOKEN_EXPIRATION_THRESHOLD_IN_SECONDS:
             _LOGGER.debug(
-                f"Token expires in {(expire_dt - now_utc).total_seconds()} seconds, refreshing"
+                "Token expires in %s seconds, refreshing",
+                (expire_dt - now_utc).total_seconds(),
             )
         else:
             _LOGGER.debug(
-                f"Token is still valid for {(expire_dt - now_utc).total_seconds()} seconds"
+                "Token is still valid for %s seconds",
+                (expire_dt - now_utc).total_seconds(),
             )
 
         # If we are within 12 hours of expiration, let's refresh
-        if expire_dt is None or (expire_dt - now_utc).total_seconds() < 43200:
+        if (
+            expire_dt is None
+            or (expire_dt - now_utc).total_seconds()
+            < TOKEN_EXPIRATION_THRESHOLD_IN_SECONDS
+        ):
             _LOGGER.debug("Refreshing Zavepower token")
             refreshed = await self._refresh_token_api()
             if refreshed:
@@ -96,7 +106,8 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 data["expiration"] = self._expiration
                 self.hass.config_entries.async_update_entry(self.entry, data=data)
             else:
-                raise UpdateFailed("Could not refresh Zavepower token.")
+                msg = "Could not refresh Zavepower token."
+                raise UpdateFailed(msg)
 
     async def _refresh_token_api(self) -> bool:
         """Call the refresh token endpoint."""
@@ -118,12 +129,12 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 self._refresh_token = data["refreshToken"]
                 self._expiration = data["expiration"]
                 return True
-        except httpx.RequestError as err:
-            _LOGGER.error("Refresh token request error: %s", err)
-        except httpx.HTTPStatusError as err:
-            _LOGGER.error("Refresh token HTTP status error: %s", err)
+        except httpx.RequestError:
+            _LOGGER.exception("Refresh token request error")
+        except httpx.HTTPStatusError:
+            _LOGGER.exception("Refresh token HTTP status error")
         except KeyError:
-            _LOGGER.error("Invalid response from refresh token endpoint")
+            _LOGGER.exception("Invalid response from refresh token endpoint")
         return False
 
     async def _fetch_systems(self):

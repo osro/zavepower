@@ -48,11 +48,11 @@ class ZavepowerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                     response.raise_for_status()
                     data = response.json()
-            except httpx.RequestError as err:
-                _LOGGER.error("Request error: %s", err)
+            except httpx.RequestError:
+                _LOGGER.exception("Request error")
                 errors["base"] = "cannot_connect"
-            except httpx.HTTPStatusError as err:
-                _LOGGER.error("HTTP status error: %s", err)
+            except httpx.HTTPStatusError:
+                _LOGGER.exception("HTTP status error")
                 errors["base"] = "invalid_auth"
             else:
                 if "jwtToken" not in data or "refreshToken" not in data:
@@ -89,7 +89,7 @@ class ZavepowerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class ZavepowerOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle Zavepower options."""
 
-    def __init__(self, config_entry):
+    def __init__(self, config_entry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
