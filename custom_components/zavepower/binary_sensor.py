@@ -1,12 +1,16 @@
 """Module contains the binary sensor entities for the Zavepower integration."""
 
+from typing import TYPE_CHECKING
+
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .coordinator import ZavepowerCoordinator
+
+if TYPE_CHECKING:
+    from .coordinator import ZavepowerCoordinator
 from .entity import ZavepowerBaseEntity
 
 
