@@ -1,7 +1,7 @@
 """Cooxrdinator for fetching data from the Zavepower API."""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, UTC
 
 import httpx
 from homeassistant.config_entries import ConfigEntry
@@ -72,7 +72,7 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 "Could not parse token expiration string: %s", self._expiration
             )
 
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
 
         _LOGGER.debug("Expire DT: %s, Now UTC: %s", expire_dt, now_utc)
 
