@@ -5,6 +5,8 @@ from typing import Any, cast
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from custom_components.zavepower.coordinator import ZavepowerCoordinator
+
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -17,7 +19,9 @@ class ZavepowerBaseEntity(CoordinatorEntity):
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, system_id: str, system_name: str) -> None:
+    def __init__(
+        self, coordinator: ZavepowerCoordinator, system_id: str, system_name: str
+    ) -> None:
         """Initialize a base Zavepower entity."""
         super().__init__(coordinator)
         self._system_id = system_id
