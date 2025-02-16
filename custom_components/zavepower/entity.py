@@ -23,7 +23,7 @@ class ZavepowerBaseEntity(CoordinatorEntity):
         self._attr_unique_id = f"{system_id}-{type(self).__name__}"
 
     @property
-    def device_info(self):
+    def device_info(self) -> dict:
         """Return device info to group related entities under one device."""
         return {
             "identifiers": {(DOMAIN, self._system_id)},

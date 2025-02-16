@@ -55,7 +55,7 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
 
         return system_states
 
-    async def _ensure_valid_token(self):
+    async def _ensure_valid_token(self) -> None:
         """Refresh the token if it is expired or about to expire."""
         # Convert self._expiration to datetime
         # Example expiration format: "2025-02-04T11:32:11.4082399Z"
@@ -96,7 +96,7 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
             else:
                 raise UpdateFailed("Could not refresh Zavepower token.")
 
-    async def _refresh_token_api(self):
+    async def _refresh_token_api(self) -> bool:
         """Call the refresh token endpoint."""
         # self._refresh_token is the old refresh token to be used
         try:
