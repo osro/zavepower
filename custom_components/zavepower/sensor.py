@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
-):
+) -> None:
     """Set up Zavepower sensors from a config entry."""
     coordinator: ZavepowerCoordinator = hass.data[DOMAIN][entry.entry_id]
 
@@ -49,7 +49,7 @@ class ZavepowerCurrentTempSensor(ZavepowerBaseEntity, SensorEntity):
         return "Current Temperature"
 
     @property
-    def native_value(self):
+    def native_value(self) -> float | None:
         """Return the current water temperature from the system state."""
         item = self._get_state_data()
         if item and item["state"]:
@@ -73,7 +73,7 @@ class ZavepowerSetTempSensor(ZavepowerBaseEntity, SensorEntity):
         return "Set Temperature"
 
     @property
-    def native_value(self):
+    def native_value(self) -> float | None:
         """Return the set (target) water temperature from the system state."""
         item = self._get_state_data()
         if item and item["state"]:
