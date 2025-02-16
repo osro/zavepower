@@ -1,7 +1,6 @@
 {
   "domain": "zavepower",
   "name": "Zavepower",
-  "version": "0.1.0",
   "codeowners": [
     "@osro"
   ],
@@ -11,5 +10,6 @@
   "issue_tracker": "https://github.com/osro/zavepower/issues",
   "requirements": [
     "httpx>=0.24.0"
-  ]
+  ],
+  "version": "0.1.0"
 }
