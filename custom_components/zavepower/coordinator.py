@@ -24,7 +24,7 @@ TOKEN_EXPIRATION_THRESHOLD_IN_SECONDS = 43200  # 12 hours
 class ZavepowerCoordinator(DataUpdateCoordinator):
     """Coordinator to fetch data from Zavepower once every 10 minutes."""
 
-    def __init__(self, hass: HomeAssistant, entry):
+    def __init__(self, hass: HomeAssistant, entry) -> None:
         """Initialize."""
         self.hass = hass
         self.entry = entry
@@ -73,7 +73,7 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
 
         now_utc = datetime.now(timezone.utc)
 
-        _LOGGER.debug(f"Expire DT: {expire_dt}, Now UTC: {now_utc}")
+        _LOGGER.debug("Expire DT: %s, Now UTC: %s", expire_dt, now_utc)
 
         if expire_dt is None:
             _LOGGER.debug("Expire datetime is None, refreshing token")
@@ -158,12 +158,14 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                     return data
                 else:
                     return []
-        except httpx.RequestError as err:
-            _LOGGER.error("Fetch systems request error: %s", err)
-            raise UpdateFailed("Cannot fetch systems.")
-        except httpx.HTTPStatusError as err:
-            _LOGGER.error("Fetch systems HTTP status error: %s", err)
-            raise UpdateFailed("Cannot fetch systems.")
+        except httpx.RequestError:
+            _LOGGER.exception("Fetch systems request error")
+            msg = "Cannot fetch systems."
+            raise UpdateFailed(msg)
+        except httpx.HTTPStatusError:
+            _LOGGER.exception("Fetch systems HTTP status error")
+            msg = "Cannot fetch systems."
+            raise UpdateFailed(msg)
 
     async def _fetch_latest_state(self, system_id):
         """Get the latest system state for a given system."""
@@ -177,9 +179,9 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 response = await client.get(url, headers=headers, timeout=15)
                 response.raise_for_status()
                 return response.json()
-        except httpx.RequestError as err:
-            _LOGGER.error("Fetch latest state request error: %s", err)
+        except httpx.RequestError:
+            _LOGGER.exception("Fetch latest state request error")
             return None
-        except httpx.HTTPStatusError as err:
-            _LOGGER.error("Fetch latest state HTTP status error: %s", err)
+        except httpx.HTTPStatusError:
+            _LOGGER.exception("Fetch latest state HTTP status error")
             return None
