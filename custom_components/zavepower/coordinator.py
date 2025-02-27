@@ -11,6 +11,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import (
     DOMAIN,
     LATEST_STATE_ENDPOINT,
+    LOGIN_ENDPOINT,
     REFRESH_TOKEN_ENDPOINT,
     USER_SYSTEMS_ENDPOINT,
 )
@@ -107,7 +108,7 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 data["expiration"] = self._expiration
                 self.hass.config_entries.async_update_entry(self.entry, data=data)
             else:
-                msg = "Could not refresh Zavepower token."
+                msg = "Could not refresh Zavepower token or login with credentials. Authentication failed."
                 raise UpdateFailed(msg)
 
     async def _refresh_token_api(self) -> bool:
@@ -130,12 +131,50 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 self._refresh_token = data["refreshToken"]
                 self._expiration = data["expiration"]
                 return True
+        except (httpx.RequestError, httpx.HTTPStatusError, KeyError) as err:
+            _LOGGER.warning("Refresh token failed, trying login endpoint: %s", err)
+            return await self._login_api()
+
+    async def _login_api(self) -> bool:
+        """Call the login endpoint as a fallback when refresh token fails."""
+        try:
+            # Get password from entry secrets
+            password = self.entry.data.get("password")
+            if not password:
+                _LOGGER.error(
+                    "No password stored in config entry, can't use login endpoint"
+                )
+                return False
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    LOGIN_ENDPOINT,
+                    json={
+                        "method": "POST",
+                        "credentials": "include",
+                        "headers": {"Content-Type": "application/json;charset=utf-8"},
+                        "username": self._username,
+                        "password": password,
+                    },
+                    timeout=15,
+                )
+                response.raise_for_status()
+                data = response.json()
+
+                if "jwtToken" not in data or "refreshToken" not in data:
+                    _LOGGER.error("Invalid response from login endpoint")
+                    return False
+
+                self._jwt_token = data["jwtToken"]
+                self._refresh_token = data["refreshToken"]
+                self._expiration = data["expiration"]
+                return True
         except httpx.RequestError:
-            _LOGGER.exception("Refresh token request error")
+            _LOGGER.exception("Login request error")
         except httpx.HTTPStatusError:
-            _LOGGER.exception("Refresh token HTTP status error")
+            _LOGGER.exception("Login HTTP status error")
         except KeyError:
-            _LOGGER.exception("Invalid response from refresh token endpoint")
+            _LOGGER.exception("Invalid response from login endpoint")
         return False
 
     async def _fetch_systems(self) -> list:

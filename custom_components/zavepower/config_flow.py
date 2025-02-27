@@ -76,6 +76,7 @@ class ZavepowerConfigFlow(ConfigFlow, domain=DOMAIN):
                             "jwt_token": data["jwtToken"],
                             "refresh_token": data["refreshToken"],
                             "expiration": data["expiration"],
+                            "password": password,
                         },
                     )
 
