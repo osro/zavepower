@@ -130,6 +130,10 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Refreshing Zavepower token")
             try:
                 refreshed = await self._refresh_token_api()
+            except Exception:
+                _LOGGER.exception("Error refreshing token")
+                return False
+            else:
                 if refreshed:
                     # Save updated tokens/expiration to the config entry
                     data = dict(self.entry.data)
@@ -138,11 +142,8 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                     data["expiration"] = self._expiration
                     self.hass.config_entries.async_update_entry(self.entry, data=data)
                     return True
-                else:
-                    _LOGGER.error("Failed to refresh token")
-                    return False
-            except Exception:
-                _LOGGER.exception("Error refreshing token")
+
+                _LOGGER.error("Failed to refresh token")
                 return False
 
         return True  # Token is valid
@@ -250,6 +251,36 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
         _LOGGER.error("All login attempts failed")
         return False
 
+    async def _handle_auth_error(
+        self, attempt: int, *, token_refreshed: bool
+    ) -> tuple[bool, bool]:
+        """
+        Handle 401/403 authentication errors with token refresh or login.
+
+        Returns:
+            tuple: (continue_immediately, token_refreshed)
+
+        """
+        if token_refreshed and attempt < MAX_RETRIES - 1:
+            # If we've already refreshed the token and still get 401,
+            # try to log in
+            _LOGGER.warning("Still unauthorized after token refresh, trying full login")
+            if await self._login_api():
+                # Save updated tokens to config entry
+                data = dict(self.entry.data)
+                data["jwt_token"] = self._jwt_token
+                data["refresh_token"] = self._refresh_token
+                data["expiration"] = self._expiration
+                self.hass.config_entries.async_update_entry(self.entry, data=data)
+                return True, token_refreshed  # Continue immediately with new token
+        elif attempt < MAX_RETRIES - 1:
+            _LOGGER.info("Unauthorized error, refreshing token")
+            if await self._ensure_valid_token():
+                # Token refreshed successfully
+                return True, True  # Continue immediately with token_refreshed=True
+
+        return False, token_refreshed
+
     async def _fetch_systems(self) -> list:
         """Get all systems for the user."""
         token_refreshed = False  # Track if we've already tried refreshing the token
@@ -268,9 +299,7 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                     response.raise_for_status()
                     # This endpoint can return a single system or a list of systems
                     data = response.json()
-                    # The example response is an object, but you mention
-                    # "There can be multiple systems"
-                    # So let's standardize it to a list
+                    # Standardize response to a list
                     if isinstance(data, dict):
                         return [data]
                     if isinstance(data, list):
@@ -300,27 +329,14 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 )
                 # If we get an unauthorized error, try to refresh the token
                 if response and response.status_code in (401, 403):
-                    if token_refreshed and attempt < MAX_RETRIES - 1:
-                        # If we've already refreshed the token and still get 401, try to log in
-                        _LOGGER.warning(
-                            "Still unauthorized after token refresh, trying full login"
-                        )
-                        if await self._login_api():
-                            # Save updated tokens to config entry
-                            data = dict(self.entry.data)
-                            data["jwt_token"] = self._jwt_token
-                            data["refresh_token"] = self._refresh_token
-                            data["expiration"] = self._expiration
-                            self.hass.config_entries.async_update_entry(
-                                self.entry, data=data
-                            )
-                            continue  # Try again immediately with new token
-                    elif attempt < MAX_RETRIES - 1:
-                        _LOGGER.info("Unauthorized error, refreshing token")
-                        if await self._ensure_valid_token():
-                            # Token refreshed successfully, continue to next attempt immediately
-                            token_refreshed = True
-                            continue
+                    (
+                        continue_immediately,
+                        token_refreshed,
+                    ) = await self._handle_auth_error(
+                        attempt, token_refreshed=token_refreshed
+                    )
+                    if continue_immediately:
+                        continue
 
                 if attempt < MAX_RETRIES - 1:
                     await self.hass.async_add_executor_job(
@@ -371,27 +387,14 @@ class ZavepowerCoordinator(DataUpdateCoordinator):
                 )
                 # If we get an unauthorized error, try to refresh the token
                 if response and response.status_code in (401, 403):
-                    if token_refreshed and attempt < MAX_RETRIES - 1:
-                        # If we've already refreshed the token and still get 401, try to log in
-                        _LOGGER.warning(
-                            "Still unauthorized after token refresh, trying full login"
-                        )
-                        if await self._login_api():
-                            # Save updated tokens to config entry
-                            data = dict(self.entry.data)
-                            data["jwt_token"] = self._jwt_token
-                            data["refresh_token"] = self._refresh_token
-                            data["expiration"] = self._expiration
-                            self.hass.config_entries.async_update_entry(
-                                self.entry, data=data
-                            )
-                            continue  # Try again immediately with new token
-                    elif attempt < MAX_RETRIES - 1:
-                        _LOGGER.info("Unauthorized error, refreshing token")
-                        if await self._ensure_valid_token():
-                            # Token refreshed successfully, continue to next attempt immediately
-                            token_refreshed = True
-                            continue
+                    (
+                        continue_immediately,
+                        token_refreshed,
+                    ) = await self._handle_auth_error(
+                        attempt, token_refreshed=token_refreshed
+                    )
+                    if continue_immediately:
+                        continue
 
                 if attempt < MAX_RETRIES - 1:
                     await self.hass.async_add_executor_job(
